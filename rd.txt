@@ -1,0 +1,166 @@
+Great work, Ritik! You've built a fully functional Unix-style shell in C++, with features like:
+
+Command parsing and execution
+
+Support for pipelines
+
+Built-in commands (cd, pwd, echo, etc.)
+
+Redirection (>, >>, 2>, 2>>)
+
+Command history and tab-completion using GNU Readline
+
+Let’s break down your shell in a structured, interview-prep friendly way:
+
+🔧 1. Project Structure & Key Libraries
+Libraries used:
+readline/readline.h, readline/history.h: For command-line editing, history, and autocompletion.
+
+unistd.h, sys/wait.h, fcntl.h: For POSIX system calls like fork, execv, pipe, dup2.
+
+filesystem: For command discovery and directory manipulation.
+
+vector, string, sstream, unordered_set: For managing tokens, input, matches.
+
+💻 2. User Input Handling
+main() loop:
+Reads input using readline().
+
+Adds non-empty input to history.
+
+Parses the command:
+
+If it contains |, it's split into parts (pipeline).
+
+Otherwise, it checks for built-in or external commands.
+
+🚀 3. Command Execution Logic
+🔹 Built-in commands: (Handled by handle_builtin)
+echo: Handles standard output and redirection (>, >>, 2>, etc.).
+
+pwd: Uses getcwd.
+
+cd: Resolves ~, absolute paths, and changes directories.
+
+type: Tells whether a command is built-in or an executable.
+
+exit 0: Exits the shell.
+
+history: Displays command history using readline's history_list().
+
+✅ If handle_builtin() returns true, main doesn't call exec.
+
+🔹 External commands: (Handled by execute_command)
+Calls fork().
+
+Child:
+
+Parses redirections and sets up dup2.
+
+Calls execv() with resolved path from PATH.
+
+Parent:
+
+Waits using waitpid().
+
+🔗 4. Pipeline Handling
+Input like ls | grep txt | wc -l is handled using:
+
+split_pipeline() → Splits on unquoted |.
+
+Pipes created using pipe().
+
+Each command runs in a separate process (via fork()).
+
+dup2() is used to connect stdout of one to stdin of the next.
+
+This mimics real shell behavior with chained process I/O.
+
+🧠 5. Command Tokenization & Quoting
+split():
+Handles:
+
+Quoted strings (', ")
+
+Escaping with \
+
+Ignores spaces unless outside quotes
+
+This ensures echo "hello world" is parsed correctly.
+
+🛠️ 6. Command Autocompletion (TAB support)
+Uses readline’s rl_completion_matches() and a custom generator.
+
+Matches:
+
+Shell built-ins
+
+Executables from all directories in $PATH
+
+Handles:
+
+Multiple tab presses
+
+Audible bell
+
+Listing suggestions
+
+Very nice UX addition — resembles Bash/Zsh behavior.
+
+🔍 7. Finding Executables
+find_executable():
+Mimics which:
+
+Parses $PATH.
+
+Searches for executable file using access().
+
+📁 8. Redirection Support
+For both built-ins and external commands:
+Supports:
+
+> / >>: Redirect stdout (overwrite/append)
+
+2> / 2>>: Redirect stderr
+
+1> / 1>>: Explicit stdout
+
+Uses open() + dup2().
+
+🧪 Possible Interview Questions (with answers)
+❓ Q1: How does your shell handle pipelines?
+I split the input string using |, then create n-1 pipes and fork n child processes. Each child sets up dup2() to redirect stdin/stdout accordingly before calling execv.
+
+❓ Q2: How are built-in commands different from external ones?
+Built-ins are handled inside the shell process (handle_builtin()), while external commands are executed in a child process using execv.
+
+❓ Q3: What happens when the user types a command?
+Input is read with readline().
+
+Tokenized with split().
+
+If it's a built-in, handled internally.
+
+Else, find_executable() resolves the path.
+
+A child is forked, and execv() runs the command.
+
+❓ Q4: How do you manage history?
+I use readline’s add_history() and history_list() to keep track of commands entered.
+
+❓ Q5: How does your shell handle redirection?
+I parse for redirection tokens (>, >>, etc.). Then in the child process, I open() the target file and use dup2() to redirect stdout/stderr before executing.
+
+❓ Q6: How does autocompletion work?
+I use rl_completion_matches() and provide a custom command_generator() that:
+
+Matches from built-in vocabulary.
+
+Scans $PATH for matching executables.
+
+✅ Extra Talking Points (if you want to flex more):
+Robust input parsing: Supports quotes, escape chars.
+
+Clean and modular: Functions like split, split_pipeline, handle_builtin, execute_command.
+
+Resilient: Handles missing files, invalid commands gracefully.
